@@ -5,9 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kmaxsoul/demo-project/api"
 	"github.com/kmaxsoul/demo-project/config"
 	"github.com/kmaxsoul/demo-project/database"
-	"github.com/kmaxsoul/demo-project/handlers"
 )
 
 func main() {
@@ -26,19 +26,6 @@ func main() {
 
 	defer pool.Close()
 
-	var router *gin.Engine = gin.Default()
-	router.SetTrustedProxies(nil)
-	router.GET("/", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"meessage": "todo API is running",
-			"status":   "success",
-			"database": "connected",
-		})
-	})
-
-	router.POST("/todos", handlers.CreateTodoHandler(pool))
-	router.GET("/todos", handlers.GetAllTodosHandler(pool))
-	router.GET("/todos/:id", handlers.GetTodoByIDHandler(pool))
-
+	var router *gin.Engine = api.SetupRouter(pool)
 	router.Run(":" + cfg.Port)
 }
