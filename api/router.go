@@ -8,10 +8,21 @@ import (
 
 func SetupRouter(pool *pgxpool.Pool) *gin.Engine {
 	var router *gin.Engine = gin.Default()
-	router.POST("/todos", handlers.CreateTodoHandler(pool))
-	router.GET("/todos", handlers.GetAllTodosHandler(pool))
-	router.GET("/todos/:id", handlers.GetTodoByIDHandler(pool))
-	router.PUT("/todos/:id", handlers.UpdateTodoHandler(pool))
+
+	todoGroup := router.Group("/todos")
+	{
+		todoGroup.POST("", handlers.CreateTodoHandler(pool))
+		todoGroup.GET("", handlers.GetAllTodosHandler(pool))
+		todoGroup.GET("/:id", handlers.GetTodoByIDHandler(pool))
+		todoGroup.PUT("/:id", handlers.UpdateTodoHandler(pool))
+		todoGroup.DELETE("/:id", handlers.DeleteTodoHandler(pool))
+	}
+
+	authGroup := router.Group("/auth")
+	{
+		authGroup.POST("/register", handlers.CreateUserHandler(pool))
+	}
 
 	return router
+
 }
