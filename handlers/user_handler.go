@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kmaxsoul/demo-project/config"
 	"github.com/kmaxsoul/demo-project/models"
 	"github.com/kmaxsoul/demo-project/repository"
 	"golang.org/x/crypto/bcrypt"
@@ -13,6 +16,15 @@ import (
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type LoginResponse struct {
+	Token string `json:"token"`
 }
 
 func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
@@ -53,4 +65,45 @@ func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		c.JSON(201, gin.H{"message": "User created successfully", "user": createuser})
 	}
+}
+
+func LoginUserHandler(pool *pgxpool.Pool, cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var loginRequest LoginRequest
+
+		if err := c.BindJSON(&loginRequest); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid request"})
+			return
+		}
+
+		user, err := repository.GetUserByEmail(pool, loginRequest.Email)
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password))
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
+			return
+		}
+
+		claims := jwt.MapClaims{
+			"user_id": user.ID,
+			"email":   user.Email,
+			"exp":     time.Now().Add(24 * time.Hour).Unix(),
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+		tokenString, err := token.SignedString([]byte(cfg.JWTSecret))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to generate token: " + err.Error()})
+			return
+		}
+
+		c.JSON(200, LoginResponse{Token: tokenString})
+
+	}
+
 }

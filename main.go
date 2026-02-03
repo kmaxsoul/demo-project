@@ -26,7 +26,7 @@ func main() {
 
 	defer pool.Close()
 
-	var router *gin.Engine = api.SetupRouter(pool)
+	var router *gin.Engine = api.SetupRouter(pool, cfg)
 
 	router.Run(":" + cfg.Port)
 }
